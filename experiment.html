@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>进食障碍眼动干预程序</title>
+
+  <!-- 引入 Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- jsPsych 相关脚本 -->
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-audio-keyboard-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-webgazer-init-camera@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-webgazer-calibrate@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-webgazer-validate@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/gh/jspsych/jspsych@jspsych@7.0.0/examples/js/webgazer/webgazer.js"></script>
+  <script src="https://unpkg.com/@jspsych/extension-webgazer@1.0.3"></script>
+
+  <style>
+    /* 全局样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      font-family: 'Roboto', 'Microsoft YaHei', sans-serif;
+      background: #f5f6f8;
+      color: #333;
+      overflow: hidden;
+    }
+
+    /* 顶部导航栏 */
+    .header {
+      width: 100%;
+      background: linear-gradient(90deg, #2c3e50, #4b6082);
+      padding: 15px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+    }
+    .header h1 {
+      color: #fff;
+      font-weight: 500;
+      font-size: 1.6rem;
+      letter-spacing: 1px;
+    }
+
+    /* 内容容器 */
+    #jspsych-target {
+      position: absolute;
+      top: 70px;
+      left: 0;
+      width: 100%;
+      height: calc(100vh - 70px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f6f8;
+    }
+    #jspsych-target .jspsych-display-element {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f6f8;
+    }
+    #jspsych-target .jspsych-content {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      max-height: 100%;
+    }
+
+    /* 食物展示区 */
+    .food-container {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 70vh;
+      border-radius: 20px;
+      background: #ffffff;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .food-item {
+      width: 48%;
+      height: 100%;
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 4px solid transparent;
+      background-color: #fafafa;
+      cursor: pointer;
+    }
+    .food-item:hover {
+      transform: translateY(-5px) scale(1.03);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+    }
+    .food-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .food-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      text-align: center;
+      padding: 12px 0;
+      font-weight: 500;
+      font-size: 1.1rem;
+      letter-spacing: 0.5px;
+    }
+    .low-calorie {
+      border-color: #27ae60;
+    }
+    .high-calorie {
+      border-color: #c0392b;
+    }
+
+    /* 中央固定十字 */
+    .central-fixation {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 80px;
+      color: #555;
+      user-select: none;
+      z-index: 999;
+      display: none;
+    }
+
+    /* 眼动追踪注视点 */
+    .gaze-point {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: red;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+    }
+
+    /* 音乐指示条 */
+    .music-indicator {
+      position: fixed;
+      top: 90px;
+      right: 30px;
+      background: linear-gradient(90deg, #1abc9c, #16a085);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-weight: 500;
+      font-size: 1rem;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1001;
+    }
+
+    /* 按钮样式 */
+    button {
+      background: linear-gradient(90deg, #2980b9, #3498db);
+      border: none;
+      color: #fff;
+      padding: 14px 36px;
+      text-align: center;
+      font-size: 1rem;
+      margin: 6px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    button:hover {
+      background: linear-gradient(90deg, #2572a5, #2c82c2);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    }
+
+    .jspsych-html-button-response .jspsych-button-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    /* 居中文字模块 */
+    .centered-text {
+      text-align: center;
+      padding: 20px 30px;
+      color: #444;
+      line-height: 1.6;
+    }
+    .centered-text p {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    /* 结束页面下载按钮区 */
+    .footer-buttons {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    /* 页脚 */
+    .footer {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #888;
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="header">
+    <h1>进食障碍眼动干预实验</h1>
+  </div>
+
+  <!-- 音乐播放指示 -->
+  <div class="music-indicator" id="music-indicator">音乐播放中</div>
+
+  <!-- 中央固定十字 -->
+  <div id="central-fixation" class="central-fixation">+</div>
+
+  <!-- 眼动追踪注视点 -->
+  <div id="gaze-point" class="gaze-point"></div>
+
+  <!-- jsPsych 渲染目标容器 -->
+  <div id="jspsych-target"></div>
+
+  <!-- 页脚 -->
+  <div class="footer">2025 北京师范大学 Eye—ED 项目组联合出品。</div>
+
+  <script>
+    /* 初始化 jsPsych */
+    const jsPsych = initJsPsych({
+      display_element: 'jspsych-target',
+      extensions: [
+        { type: jsPsychExtensionWebgazer }
+      ]
+    });
+
+    /* 生成图片列表 */
+    const lowCalorieImages = [];
+    const highCalorieImages = [];
+    const numImages = 5;
+
+    for (let i = 1; i <= numImages; i++) {
+      const idx = ('00' + i).slice(-3);
+      lowCalorieImages.push('images/low/' + idx + '.jpg');
+      highCalorieImages.push('images/high/' + idx + '.jpg');
+    }
+
+    /* 音乐文件列表 */
+    const musicFiles = [
+      'music/calm_music.mp3',
+      'music/positive_sound.mp3'
+    ];
+
+    /* 初始化音乐播放器 */
+    window.globalAudio = new Audio(musicFiles[0]);
+    window.globalAudio.loop = true;
+
+    /* 预加载资源 */
+    const imagesToPreload = [...lowCalorieImages, ...highCalorieImages];
+    const audioToPreload = musicFiles;
+    const preload = {
+      type: jsPsychPreload,
+      images: imagesToPreload,
+      audio: audioToPreload,
+      message: '<div class="centered-text"><p>正在加载资源，请稍候…</p></div>'
+    };
+
+    const timeline = [];
+    timeline.push(preload);
+
+    /* ==== 校准相关的各个步骤 ==== */
+    const camera_instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>为了参与实验，您必须允许使用您的摄像头。</p>
+          <p>您将在下一屏幕收到权限请求。</p>
+          <p>如果您不同意使用摄像头，将无法参与本实验。</p>
+          <p>摄像头初始化可能需要最多30秒时间。</p>
+        </div>
+      `,
+      choices: ['明白了']
+    };
+    timeline.push(camera_instructions);
+
+    const init_camera = { type: jsPsychWebgazerInitCamera };
+    timeline.push(init_camera);
+
+    const calibration_instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>现在将进行眼动校准，以便软件使用您的眼部图像预测您的注视位置。</p>
+          <p>您将看到一系列圆点出现在屏幕上。请注视每个圆点并点击它。</p>
+        </div>
+      `,
+      choices: ['明白了']
+    };
+    timeline.push(calibration_instructions);
+
+    const calibration = {
+      type: jsPsychWebgazerCalibrate,
+      calibration_points: [
+        [25, 25], [75, 25], [50, 50], [25, 75], [75, 75]
+      ],
+      repetitions_per_point: 2,
+      randomize_calibration_order: true
+    };
+    timeline.push(calibration);
+
+    const validation_instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>现在我们将测量校准的准确性。</p>
+          <p>请注视屏幕上出现的每个圆点。</p>
+          <p style="font-weight: bold;">这次您不需要点击圆点。</p>
+        </div>
+      `,
+      choices: ['明白了'],
+      post_trial_gap: 1000
+    };
+    timeline.push(validation_instructions);
+
+    const validation = {
+      type: jsPsychWebgazerValidate,
+      validation_points: [
+        [25, 25], [75, 25], [50, 50], [25, 75], [75, 75]
+      ],
+      roi_radius: 200,
+      time_to_saccade: 1000,
+      validation_duration: 2000,
+      data: { task: 'validate' }
+    };
+    timeline.push(validation);
+
+    const recalibrate_instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>校准的准确性低于预期水平。</p>
+          <p>让我们再尝试校准一次。</p>
+          <p>在下一屏幕，请注视圆点并点击它们。</p>
+        </div>
+      `,
+      choices: ['好的']
+    };
+    const recalibrate = {
+      timeline: [recalibrate_instructions, calibration, validation_instructions, validation],
+      conditional_function: function() {
+        const val_data = jsPsych.data.get().filter({ task: 'validate' }).values()[0];
+        return val_data.percent_in_roi.some(x => x < 50);
+      },
+      data: { phase: 'recalibration' }
+    };
+    timeline.push(recalibrate);
+
+    const calibration_done = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>太好了，校准已完成！</p>
+          <p>接下来将开始实验，请注视屏幕中央的十字，然后开始注视食物图片。</p>
+        </div>
+      `,
+      choices: ['继续']
+    };
+    timeline.push(calibration_done);
+
+    /* ==== 欢迎页 和 实验说明 ==== */
+    const welcome = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>欢迎参加进食障碍眼动干预实验。按任意键继续。</p>
+        </div>
+      `
+    };
+    timeline.push(welcome);
+
+    const instructions = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `
+        <div class="centered-text">
+          <p>在实验中，屏幕左右两侧将分别呈现<span style="color:#27ae60;"><b>低热量食物</b></span>和<span style="color:#c0392b;"><b>高热量食物</b></span>图片。</p>
+          <p>当您注视<span style="color:#27ae60;"><b>低热量食物</b></span>时，将播放愉悦的音乐。</p>
+          <p>当您注视<span style="color:#c0392b;"><b>高热量食物</b></span>时，音乐将停止播放。</p>
+          <p>实验共有 20 个试次，每个试次持续 15 秒。</p>
+          <p>请按任意键开始实验。</p>
+        </div>
+      `,
+      post_trial_gap: 2000
+    };
+    timeline.push(instructions);
+
+    /* ==== 构建 20 个试次 ==== */
+    const trial_count = 20;
+    const trials = [];
+    const centralFixation = document.getElementById('central-fixation');
+    const gazePoint = document.getElementById('gaze-point');
+    let gazeUpdateInterval;
+
+    // 更新注视点位置的函数
+    function updateGazePoint() {
+      if (!webgazer) return;
+
+      webgazer.getCurrentPrediction().then(function(prediction) {
+        if (prediction) {
+          const x = prediction.x;
+          const y = prediction.y;
+          gazePoint.style.left = (x - 5) + 'px'; // 微调位置，确保圆点中心对齐
+          gazePoint.style.top = (y - 5) + 'px';
+          gazePoint.style.display = 'block';
+        }
+      });
+    }
+
+    // 开始更新注视点
+    function startGazeTracking() {
+      if (gazeUpdateInterval) clearInterval(gazeUpdateInterval);
+      gazePoint.style.display = 'none'; // 先隐藏，等待第一个有效预测
+      gazeUpdateInterval = setInterval(updateGazePoint, 50);
+    }
+
+    // 停止更新注视点
+    function stopGazeTracking() {
+      if (gazeUpdateInterval) {
+        clearInterval(gazeUpdateInterval);
+        gazeUpdateInterval = null;
+      }
+      gazePoint.style.display = 'none';
+    }
+
+    for (let i = 0; i < trial_count; i++) {
+      // 随机选择图片
+      const lowImageIdx = jsPsych.randomization.sampleWithoutReplacement(
+        Array.from({length: lowCalorieImages.length}, (_, k) => k),
+        1
+      )[0];
+      const highImageIdx = jsPsych.randomization.sampleWithoutReplacement(
+        Array.from({length: highCalorieImages.length}, (_, k) => k),
+        1
+      )[0];
+      const lowImage = lowCalorieImages[lowImageIdx];
+      const highImage = highCalorieImages[highImageIdx];
+
+      // 随机决定左右位置
+      const leftIsLow = Math.random() < 0.5;
+
+      // 注视点试次
+      trials.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '',
+        choices: "NO_KEYS",
+        trial_duration: jsPsych.randomization.sampleWithoutReplacement([800, 1000, 1200], 1)[0],
+        data: { task: 'fixation', trial_index: i + 1 },
+        on_start: function() {
+          // 显示中央固定十字
+          centralFixation.style.display = 'block';
+
+          // 隐藏眼动追踪注视点并停止更新
+          stopGazeTracking();
+        },
+        on_finish: function() {
+          // 隐藏中央固定十字
+          centralFixation.style.display = 'none';
+        }
+      });
+
+      // 图片展示试次
+      trials.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function() {
+          const leftImageSrc  = leftIsLow ? lowImage : highImage;
+          const rightImageSrc = leftIsLow ? highImage : lowImage;
+          const leftClass     = leftIsLow ? 'low-calorie' : 'high-calorie';
+          const rightClass    = leftIsLow ? 'high-calorie' : 'low-calorie';
+          const leftLabel     = leftIsLow ? '低热量食物' : '高热量食物';
+          const rightLabel    = leftIsLow ? '高热量食物' : '低热量食物';
+
+          return `
+            <div class="food-container">
+              <div class="food-item ${leftClass}" id="left-food">
+                <img src="${leftImageSrc}" />
+                <div class="food-label">${leftLabel}</div>
+              </div>
+              <div class="food-item ${rightClass}" id="right-food">
+                <img src="${rightImageSrc}" />
+                <div class="food-label">${rightLabel}</div>
+              </div>
+            </div>
+          `;
+        },
+        trial_duration: 15000,
+        choices: "NO_KEYS",
+        data: {
+          task: 'test',
+          trial_index: i + 1,
+          left_is_low: leftIsLow,
+          low_calorie: lowImage,
+          high_calorie: highImage
+        },
+        extensions: [
+          {
+            type: jsPsychExtensionWebgazer,
+            params: { targets: ['#left-food', '#right-food'] }
+          }
+        ],
+        on_start: function() {
+          const lowSelector = leftIsLow ? '#left-food' : '#right-food';
+          const musicIndicator = document.getElementById('music-indicator');
+          const audio = window.globalAudio;
+
+          let isGazingLow = false;
+          let pauseTimeout = null;
+
+          // 开始追踪注视点
+          startGazeTracking();
+
+          // 音乐控制回调
+          this.webgazerCallback = function() {
+            if (!webgazer) return;
+            webgazer.getCurrentPrediction().then(function(pred) {
+              if (!pred) return;
+              const x = pred.x, y = pred.y;
+
+              const lowEl = document.querySelector(lowSelector);
+              if (!lowEl) return;
+
+              const rect = lowEl.getBoundingClientRect();
+              const inLow = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+              if (inLow) {
+                if (!isGazingLow) {
+                  isGazingLow = true;
+                  if (pauseTimeout) {
+                    clearTimeout(pauseTimeout);
+                    pauseTimeout = null;
+                  }
+                  if (audio.paused) {
+                    audio.play().catch(e => console.log('播放失败', e));
+                    musicIndicator.style.display = 'block';
+                  }
+                }
+              } else {
+                if (isGazingLow) {
+                  isGazingLow = false;
+                  if (!pauseTimeout) {
+                    pauseTimeout = setTimeout(() => {
+                      if (!isGazingLow && !audio.paused) {
+                        audio.pause();
+                        musicIndicator.style.display = 'none';
+                      }
+                      pauseTimeout = null;
+                    }, 500);
+                  }
+                }
+              }
+            });
+          };
+
+          this.interval = setInterval(this.webgazerCallback, 200);
+        },
+        on_finish: function() {
+          clearInterval(this.interval);
+          const musicIndicator = document.getElementById('music-indicator');
+          if (musicIndicator) musicIndicator.style.display = 'none';
+          if (window.globalAudio && !window.globalAudio.paused) {
+            window.globalAudio.pause();
+          }
+
+          // 停止追踪注视点
+          stopGazeTracking();
+        }
+      });
+    }
+
+    // 将所有 trials 按顺序插入 timeline
+    timeline.push({
+      timeline: trials,
+      randomize_order: false
+    });
+
+    // 实验结束后发送数据到 Google Sheets
+    const sendDataToGoogleSheets = () => {
+     // 获取所有实验数据（过滤出测试 trial）
+     const testData = jsPsych.data.get().filter({ task: 'test' }).values();
+
+      // 你的 Google Apps Script Web 应用 URL
+     const apiUrl = 'https://script.google.com/macros/s/AKfycbwb0DInnSKzzOGdjBj1j_X6AmoCPQn_anJn4SqtZCx6ngevsHu71e0VKRSrkkJxJ9g/exec'; // 替换为你复制的 URL
+
+     // 逐个发送每行数据（避免超出 URL 参数长度限制）
+      testData.forEach((row, index) => {
+       // 延迟发送每行数据，避免服务器限流
+        setTimeout(() => {
+         // 使用 FormData 构建 POST 请求
+         const formData = new FormData();
+          Object.keys(row).forEach(key => {
+            formData.append(key, row[key]);
+         });
+
+          // 发送数据
+         fetch(apiUrl, {
+           method: 'POST',
+            body: formData
+          })
+          .then(response => response.text())
+          .then(result => console.log(`数据行 ${index + 1} 发送成功:`, result))
+         .catch(error => console.error(`数据行 ${index + 1} 发送失败:`, error));
+
+       }, index * 500); // 每行间隔 500ms
+  });
+};
+
+    // 在实验结束时调用
+    const done = {
+     type: jsPsychHtmlButtonResponse,
+     stimulus: `
+        <div class="centered-text">
+          <p>实验完成！数据已自动保存。</p>
+        </div>
+     `,
+      choices: ['完成'],
+     on_finish: function() {
+       // 发送数据到 Google Sheets
+        sendDataToGoogleSheets();
+     }
+    };
+    timeline.push(done);
+    /* ==== 运行实验 ==== */
+    jsPsych.run(timeline);
+  </script>
+</body>
+</html>
